@@ -6,6 +6,7 @@ from scipy.stats import skew, kurtosis
 from datetime import datetime
 
 import streamlit as st
+st.set_page_config(layout="wide")
 
 # Display the introduction message
 st.markdown("""
