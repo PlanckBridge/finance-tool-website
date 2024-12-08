@@ -32,31 +32,16 @@ Separate multiple tickers with commas.
 PRICE_COLUMNS = ['Adj Close', 'Close']
 
 def fetch_stock_data(tickers):
-    """Fetch historical data for multiple tickers."""
+    """Fetch historical data for multiple tickers with adjusted close prices."""
     try:
         data = yf.download(tickers, group_by='ticker', period="max", threads=True)
         if data.empty:
             st.error(f"No data found for tickers: {', '.join(tickers)}")
             return None
-        
-        # Ensure only 'Adj Close' column is used
+        # Use only the 'Adj Close' column
         if isinstance(data.columns, pd.MultiIndex):
-            adjusted_data = {
-                ticker: data[ticker][['Adj Close']].dropna() for ticker in tickers if 'Adj Close' in data[ticker].columns
-            }
-            # Check if any tickers are missing 'Adj Close'
-            missing_adj_close = [ticker for ticker in tickers if ticker not in adjusted_data]
-            if missing_adj_close:
-                st.error(f"'Adj Close' data not available for: {', '.join(missing_adj_close)}")
-                return None
-            return adjusted_data
-        
-        # Single ticker case
-        if 'Adj Close' not in data.columns:
-            st.error(f"'Adj Close' data not available for the ticker: {tickers[0]}")
-            return None
+            return {ticker: data[ticker][['Adj Close']].dropna() for ticker in tickers}
         return {tickers[0]: data[['Adj Close']].dropna()}
-    
     except Exception as e:
         st.error(f"Error fetching data for tickers: {tickers}: {e}")
         return None
@@ -80,12 +65,13 @@ def align_stock_data(data_dict, option, custom_start_date=None, custom_end_date=
         return {}
     return data_dict
 
-def calculate_statistics(data, price_column):
-    """Calculate financial statistics for a stock."""
+def calculate_statistics(data, price_column='Adj Close'):
+    """Calculate financial statistics using adjusted close prices."""
     try:
         if len(data) < 2:
             return {}
 
+        # Ensure 'Cumulative Return' uses 'Adj Close'
         start_date = data.index.min().date()
         end_date = data.index.max().date()
         years = (data.index.max() - data.index.min()).days / 365.25
@@ -116,22 +102,22 @@ def calculate_statistics(data, price_column):
         return {}
 
 def calculate_correlation_table(data_dict, sorted_tickers):
-    """Calculate and return a correlation matrix for the tickers, sorted by cumulative return."""
-    # Collect daily returns for each ticker
+    """Calculate and return a correlation matrix for the tickers."""
+    # Collect daily returns for each ticker using 'Adj Close'
     daily_returns = pd.DataFrame({
         ticker: data['Adj Close'].pct_change().dropna()
-        for ticker, data in data_dict.items() if 'Adj Close' in data.columns
+        for ticker, data in data_dict.items()
     })
-    
+
     # Compute correlation matrix
     correlation_matrix = daily_returns.corr()
-    
+
     # Reorder rows and columns based on sorted_tickers
     correlation_matrix = correlation_matrix.loc[sorted_tickers, sorted_tickers]
-    
+
     # Add "Correlation" in the top-left cell
-    correlation_matrix.index.name = "Correlation Matrix"  # Set the index name to appear in the top-left corner
-    
+    correlation_matrix.index.name = "Correlation Matrix"
+
     # Round values for readability
     correlation_matrix = correlation_matrix.round(4)
     return correlation_matrix
@@ -221,13 +207,6 @@ if tickers:
                 if price_col:
                     data['Cumulative Return'] = data[price_col] / data[price_col].iloc[0] - 1
                     stats_dict[ticker] = calculate_statistics(data, price_col)
-
-                    # Display the first and last rows of the data for each ticker
-                    st.subheader(f"First and Last Rows of Data for {ticker}")
-                    st.write("First Row:")
-                    st.dataframe(data.head(1))  # First row
-                    st.write("Last Row:")
-                    st.dataframe(data.tail(1))  # Last row
 
             # Sort tickers by cumulative return
             sorted_tickers = sorted(
