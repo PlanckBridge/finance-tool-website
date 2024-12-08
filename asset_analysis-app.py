@@ -206,6 +206,13 @@ if tickers:
                     data['Cumulative Return'] = data[price_col] / data[price_col].iloc[0] - 1
                     stats_dict[ticker] = calculate_statistics(data, price_col)
 
+                    # Display the first and last rows of the data for each ticker
+                    st.subheader(f"First and Last Rows of Data for {ticker}")
+                    st.write("First Row:")
+                    st.dataframe(data.head(1))  # First row
+                    st.write("Last Row:")
+                    st.dataframe(data.tail(1))  # Last row
+
             # Sort tickers by cumulative return
             sorted_tickers = sorted(
                 stats_dict.keys(),
