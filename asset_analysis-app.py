@@ -38,9 +38,25 @@ def fetch_stock_data(tickers):
         if data.empty:
             st.error(f"No data found for tickers: {', '.join(tickers)}")
             return None
+        
+        # Ensure only 'Adj Close' column is used
         if isinstance(data.columns, pd.MultiIndex):
-            return {ticker: data[ticker].dropna() for ticker in tickers}
-        return {tickers[0]: data.dropna()}
+            adjusted_data = {
+                ticker: data[ticker][['Adj Close']].dropna() for ticker in tickers if 'Adj Close' in data[ticker].columns
+            }
+            # Check if any tickers are missing 'Adj Close'
+            missing_adj_close = [ticker for ticker in tickers if ticker not in adjusted_data]
+            if missing_adj_close:
+                st.error(f"'Adj Close' data not available for: {', '.join(missing_adj_close)}")
+                return None
+            return adjusted_data
+        
+        # Single ticker case
+        if 'Adj Close' not in data.columns:
+            st.error(f"'Adj Close' data not available for the ticker: {tickers[0]}")
+            return None
+        return {tickers[0]: data[['Adj Close']].dropna()}
+    
     except Exception as e:
         st.error(f"Error fetching data for tickers: {tickers}: {e}")
         return None
