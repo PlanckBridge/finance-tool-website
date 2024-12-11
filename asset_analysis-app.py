@@ -201,6 +201,27 @@ if tickers:
             data_dict = align_stock_data(data_dict, align_option)
 
         if data_dict:
+            # Create a unified DataFrame with the tickers as columns and the date as the index
+            combined_data = pd.DataFrame({
+                ticker: data['Adj Close']
+                for ticker, data in data_dict.items()
+            })
+
+            # Reset the index so the date is included as a column in the CSV
+            combined_data.reset_index(inplace=True)
+
+            # Rename the index column to "Date"
+            combined_data.rename(columns={"index": "Date"}, inplace=True)
+
+            # Provide a download button for the filtered raw data
+            csv_data = combined_data.to_csv(index=False)
+            st.download_button(
+                label="Download Filtered Raw Data as CSV",
+                data=csv_data,
+                file_name="filtered_raw_data.csv",
+                mime="text/csv"
+            )
+
             stats_dict = {}
             for ticker, data in data_dict.items():
                 price_col = next((col for col in PRICE_COLUMNS if col in data.columns), None)
